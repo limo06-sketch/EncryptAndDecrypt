@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="EncryptAndDecrypt.vcxproj" />
+  <Project Path="EncryptAndDecrypt.vcxproj" Id="f67d72a3-8f0b-4014-8d4c-34b9a6ff7e5a" />
 </Solution>

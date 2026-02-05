@@ -462,7 +462,7 @@ int main()
     size_t cnt_er_er = { 0 };
     const auto max_er { 2 };
     // 指定文件路径，注意：使用4反斜杠
-    std::string filePath = "D:\\\\test.txt";
+    std::string filePath = "E:\\\\test.txt";
 
     // 创建并打开文件
     std::ofstream outFile(filePath, ios::app);

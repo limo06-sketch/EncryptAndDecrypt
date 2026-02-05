@@ -19,13 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\新建文件夹\EncryptAndDecrypt\src\AES256.h" />
-    <ClInclude Include="..\新建文件夹\EncryptAndDecrypt\src\best_hash.h" />
+    <ClInclude Include="src\AES256.h" />
+    <ClInclude Include="src\best_hash.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\新建文件夹\EncryptAndDecrypt\src\AES256.cpp" />
-    <ClCompile Include="..\新建文件夹\EncryptAndDecrypt\src\best_hash.cpp" />
-    <ClCompile Include="..\新建文件夹\EncryptAndDecrypt\src\main.cpp" />
+    <ClCompile Include="src\AES256.cpp" />
+    <ClCompile Include="src\best_hash.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>

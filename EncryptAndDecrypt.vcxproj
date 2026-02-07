@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="src\AES256.h" />
     <ClInclude Include="src\best_hash.h" />
+    <ClInclude Include="src\Tollbox.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AES256.cpp" />

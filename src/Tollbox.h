@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <type_traits>
 #include <map>
 #include <cmath>
@@ -263,7 +263,7 @@ static size_t game()
     }
 
     long long pu = military_grade_random_range<long long>(1, max_num);
-    clog << "已生成随机数，请开始猜测（范围1~" << max_num << "）" << endl;
+    clog << "已生成随机数，请开始猜测(范围1~" << max_num << ")" << endl;
 
     size_t cnt = 0;
 

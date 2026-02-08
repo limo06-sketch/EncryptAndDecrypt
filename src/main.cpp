@@ -34,7 +34,7 @@ int main()
     size_t cnt_er = { 0 };
     size_t cnt_er_er = { 0 };
     const auto max_er { 2 };
-    // 指定文件路径，注意：使用4反斜杠
+    // 指定文件路径，注意：使用双反斜杠
     std::string filePath = "E:\\C++\\test.txt";
 
     // 创建并打开文件

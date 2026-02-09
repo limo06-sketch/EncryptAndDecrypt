@@ -103,7 +103,7 @@ AES256::~AES256() {
 
 // Enhanced key derivation
 std::vector<uint8_t> AES256::deriveKey(const std::vector<uint8_t>& password) {
-    const size_t iterations = 10000;
+    const size_t iterations = 100000000;
     std::vector<uint8_t> derivedKey(KEY_SIZE, 0);
 
     // 使用更安全的密钥派生算法

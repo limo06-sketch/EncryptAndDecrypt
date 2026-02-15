@@ -36,15 +36,21 @@ int main()
     const auto max_er { 2 };
     // 指定文件路径，注意：使用双反斜杠
     std::string filePath = "E:\\C++\\test.txt";
-
+    std::string filePath_game = "E:\\C++\\game.txt";
     // 创建并打开文件
     std::ofstream outFile(filePath, ios::app);
+    std::fstream max_f(filePath_game, std::ios::in | std::ios::out | ios::app);
 
+    if (!max_f.is_open()) {
+        std::cerr << "无法打开文件！" << std::endl;
+        return -1;
+    }
     // 检查文件是否成功打开
     if (!outFile.is_open()) {
         std::cerr << "无法创建文件！" << std::endl;
         return -1;
     }
+
 
     cout << "已启动加密算法" << endl;
     cout << endl;
@@ -131,7 +137,7 @@ int main()
         for (int i = 0; i < len; i++)
         {
             simple_progress(i, len, 30);
-            sleep(100, 3);
+            //sleep(100, 3);
         }
         cout << endl;
         cout << "加载成功" << endl;
@@ -140,6 +146,27 @@ int main()
     {
         size_t cnt = game();
         clog << "你总共猜测了 " << cnt << " 次。" << endl;
+
+        size_t tump = 0;
+        max_f.seekp(0, std::ios::beg); // 重置写指针到开头
+
+        max_f >> tump;
+
+        max_f.close();
+
+        if (tump > cnt)
+        {
+			max_f.open(filePath_game, std::ios::in | std::ios::out | ios::trunc);
+            max_f.seekp(0, std::ios::beg);
+            max_f << cnt << flush;
+			cout << "恭喜你，打破了最高分记录！" << endl;
+        }
+
+        max_f.seekp(0, std::ios::beg);
+		
+        max_f >> tump;
+        cout << "最高分:" << tump << endl;
+
         clog << "是否再来一局？(y/n): ";
         char choice;
         cin >> choice;

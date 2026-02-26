@@ -45,5 +45,8 @@
     <None Include="docs\QUICK_START.md" />
     <None Include="README_ARGON2.md" />
     <None Include="PROJECT_COMPLETION_REPORT.md" />
+    <None Include="docs\PERFORMANCE_ANALYSIS.md" />
+    <None Include="docs\OPTIMIZATION_CHECKLIST.md" />
+    <None Include="RUNTIME_ANALYSIS_SUMMARY.md" />
   </ItemGroup>
 </Project>

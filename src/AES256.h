@@ -39,6 +39,7 @@ private:
     std::vector<uint8_t> key;
     std::vector<uint8_t> macKey;
     std::vector<uint32_t> roundKeys;
+    std::vector<uint8_t> salt;  // 每个实例的随机盐值
 
     // Enhanced security components
     class SecureRandom {
@@ -79,7 +80,8 @@ private:
     uint32_t rotWord(uint32_t word);
 
     // Security enhancement: derive key with salt
-    std::vector<uint8_t> deriveKey(const std::vector<uint8_t>& password);
+    std::vector<uint8_t> deriveKey(const std::vector<uint8_t>& password, 
+                                    const std::vector<uint8_t>& salt);
 
     // 新增：CTR模式辅助函数
     void incrementCounter(std::vector<uint8_t>& counter);

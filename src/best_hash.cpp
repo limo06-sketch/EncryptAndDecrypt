@@ -188,7 +188,7 @@ void SecureHash::spongeSqueeze(uint64_t state[STATE_SIZE], uint8_t* output, size
 
 // 增强密钥派生函数实现
 void SecureHash::keyStrengthening(uint64_t state[STATE_SIZE], const std::vector<uint8_t>& data) {
-    constexpr uint32_t ITERATIONS = 100000000;
+    constexpr uint32_t ITERATIONS = 5000000;
 
     for (uint32_t i = 0; i < ITERATIONS; ++i) {
         uint64_t strengthening_data[3] = {

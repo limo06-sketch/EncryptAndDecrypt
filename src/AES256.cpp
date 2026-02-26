@@ -116,60 +116,127 @@ AES256::~AES256() {
     constantTimeMemZero(roundKeys.data(), roundKeys.size() * sizeof(uint32_t));
 }
 
-// Enhanced key derivation (PBKDF2-style implementation)
+// Argon2-inspired memory-hard key derivation function
 std::vector<uint8_t> AES256::deriveKey(const std::vector<uint8_t>& password, 
                                         const std::vector<uint8_t>& salt) {
-    const size_t iterations = 500000;  // 增强的迭代次数
-    std::vector<uint8_t> derivedKey(KEY_SIZE * 2, 0);  // 派生两个密钥（加密密钥+MAC密钥）
+    // Argon2参数配置
+    const uint32_t memory_size = 262144;  // 64KB内存块（可调整为更高以增加安全性）
+    const uint32_t iterations = 4;       // Argon2参数：时间成本
+    const uint32_t parallelism = 1;      // 并行度（单线程）
+    const uint32_t output_length = KEY_SIZE * 2;  // 输出64字节
 
-    // 初始化：使用HMAC-SHA3风格的混合
-    std::vector<uint8_t> U(KEY_SIZE, 0);
+    // 初始化哈希
+    std::vector<uint8_t> initial_hash(64);
+    {
+        std::vector<uint8_t> hash_input;
+        hash_input.reserve(password.size() + salt.size() + 100);
 
-    // 第一轮混合：password + salt
-    for (size_t j = 0; j < KEY_SIZE; j++) {
-        uint8_t p = password[j % password.size()];
-        uint8_t s = salt[j % salt.size()];
-        U[j] = (p ^ s);
-    }
+        // 组合密码和盐
+        hash_input.insert(hash_input.end(), password.begin(), password.end());
+        hash_input.insert(hash_input.end(), salt.begin(), salt.end());
 
-    // 主迭代循环 - PBKDF2风格
-    for (size_t i = 0; i < iterations; i++) {
-        // 轮转并应用非线性变换
-        for (size_t j = 0; j < KEY_SIZE; j++) {
-            uint8_t u_val = U[j];
-            uint8_t p = password[j % password.size()];
-            uint8_t s = salt[i % salt.size()];
-
-            // 应用多重混合函数
-            u_val ^= ((p + i) & 0xFF);
-            u_val = ((u_val << 1) | (u_val >> 7));  // 左旋转
-            u_val ^= ((s + j) & 0xFF);
-
-            // 非线性S盒变换（基于AES S-box思想）
-            u_val = SBOX[u_val];
-
-            // 累积到派生密钥
-            derivedKey[j] ^= u_val;
-            if (j + KEY_SIZE < KEY_SIZE * 2) {
-                derivedKey[j + KEY_SIZE] ^= (u_val ^ p ^ s);
+        // 添加Argon2参数编码
+        uint32_t params[4] = { 
+            parallelism, 
+            iterations, 
+            memory_size, 
+            static_cast<uint32_t>(output_length) 
+        };
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                hash_input.push_back((params[i] >> (8 * j)) & 0xFF);
             }
-
-            U[j] = u_val;
         }
 
-        // 每1000轮进行一次额外混合
-        if (i % 1000 == 0) {
-            for (size_t j = 0; j < KEY_SIZE - 1; j++) {
-                U[j] ^= U[j + 1];
+        initial_hash = SecureHash::hashBytes(hash_input, 64);
+    }
+
+    // 分配内存块矩阵（内存困难部分）
+    std::vector<std::vector<uint8_t>> memory_matrix(memory_size);
+    for (uint32_t i = 0; i < memory_size; i++) {
+        memory_matrix[i].resize(64);
+    }
+
+    // 第1阶段：用初始哈希填充内存块
+    std::vector<uint8_t> block_input = initial_hash;
+
+    for (uint32_t i = 0; i < memory_size; i++) {
+        // 添加块索引
+        for (int j = 0; j < 4; j++) {
+            block_input.push_back((i >> (8 * j)) & 0xFF);
+        }
+
+        // 哈希生成内存块内容
+        std::vector<uint8_t> block_hash = SecureHash::hashBytes(block_input, 64);
+        memory_matrix[i] = block_hash;
+
+        // 为下一块准备输入（使用当前块的输出）
+        block_input = block_hash;
+    }
+
+    // 第2阶段：多轮处理内存（内存困难核心）
+    for (uint32_t iter = 0; iter < iterations; iter++) {
+        for (uint32_t lane = 0; lane < parallelism; lane++) {
+            for (uint32_t i = 0; i < memory_size; i++) {
+                // 伪随机依赖：基于当前块内容选择参考块
+                uint32_t prev_index = (i > 0) ? i - 1 : memory_size - 1;
+
+                // 从当前块的前4字节解析索引偏移
+                uint32_t index_offset = 0;
+                for (int j = 0; j < 4; j++) {
+                    index_offset = (index_offset << 8) | memory_matrix[i][j];
+                }
+
+                // 计算参考索引（伪随机访问模式）
+                uint32_t ref_index = index_offset % memory_size;
+
+                // 计算下一个内存块：与多个块混合
+                std::vector<uint8_t> mixed_block(64);
+
+                // 混合当前块、前一块、参考块
+                for (size_t j = 0; j < 64; j++) {
+                    mixed_block[j] = 
+                        memory_matrix[i][j] ^
+                        memory_matrix[prev_index][j] ^
+                        memory_matrix[ref_index][j];
+                }
+
+                // 应用非线性变换（使用AES S-box）
+                for (size_t j = 0; j < 64; j++) {
+                    mixed_block[j] = SBOX[mixed_block[j]];
+                }
+
+                // 哈希混合块的结果
+                std::vector<uint8_t> hash_result = SecureHash::hashBytes(mixed_block, 64);
+
+                // 更新内存块
+                for (size_t j = 0; j < 64; j++) {
+                    memory_matrix[i][j] = hash_result[j];
+                }
             }
-            U[KEY_SIZE - 1] ^= U[0];
         }
     }
 
-    // 清零敏感数据
-    constantTimeMemZero(U.data(), U.size());
+    // 第3阶段：提取最终哈希
+    std::vector<uint8_t> final_block = memory_matrix[memory_size - 1];
 
-    return derivedKey;
+    // 与第一个块进行异或混合以增加安全性
+    for (size_t i = 0; i < 64; i++) {
+        final_block[i] ^= memory_matrix[0][i];
+    }
+
+    // 最终哈希以生成输出
+    std::vector<uint8_t> output = SecureHash::hashBytes(final_block, output_length);
+
+    // 安全清零内存矩阵（重要！）
+    for (uint32_t i = 0; i < memory_size; i++) {
+        constantTimeMemZero(memory_matrix[i].data(), memory_matrix[i].size());
+    }
+    constantTimeMemZero(initial_hash.data(), initial_hash.size());
+    constantTimeMemZero(final_block.data(), final_block.size());
+    constantTimeMemZero(block_input.data(), block_input.size());
+
+    return output;
 }
 
 // Constant-time memory zeroing

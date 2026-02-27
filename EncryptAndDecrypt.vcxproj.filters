@@ -24,6 +24,9 @@
     <ClInclude Include="src\Tollbox.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\SecurityUtilsCrossplatform.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AES256.cpp">
@@ -48,5 +51,14 @@
     <None Include="docs\PERFORMANCE_ANALYSIS.md" />
     <None Include="docs\OPTIMIZATION_CHECKLIST.md" />
     <None Include="RUNTIME_ANALYSIS_SUMMARY.md" />
+    <None Include="docs\SECURITY_ASSESSMENT.md" />
+    <None Include="docs\SECURITY_QUICK_START.md" />
+    <None Include="SECURITY_EXECUTIVE_SUMMARY.md" />
+    <None Include="docs\SECURITY_REFERENCE_CARD.md" />
+    <None Include="docs\SECURITY_IMPLEMENTATION_GUIDE.md" />
+    <None Include="docs\CROSSPLATFORM_GUIDE.md" />
+    <None Include="docs\CROSSPLATFORM_QUICKSTART.md" />
+    <None Include="CROSSPLATFORM_SUMMARY.md" />
+    <None Include="CROSSPLATFORM_CHECKLIST.md" />
   </ItemGroup>
 </Project>

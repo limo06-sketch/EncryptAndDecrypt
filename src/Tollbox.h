@@ -11,11 +11,13 @@
 #include <atomic>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include "best_hash.h"
 #include <random>
 #include <limits>   
 #include <cstring>
 #include <cstdint>
+#include <iomanip>
 using namespace std;
 
 // Stored AEAD blob for verification (IV||ciphertext||MAC)
@@ -27,17 +29,17 @@ static std::vector<uint8_t> stored_correct_aead;
  */
 static std::string getCurrentTime() {
     auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
+    auto time_val = std::chrono::system_clock::to_time_t(now);
 
     std::stringstream ss;
     std::tm tm = {};
 
 #ifdef _WIN32
     // Windows 版本
-    localtime_s(&tm, &time_t);
+    localtime_s(&tm, &time_val);
 #else
     // Linux/macOS 版本
-    localtime_r(&time_t, &tm);
+    localtime_r(&time_val, &tm);
 #endif
 
     ss << std::put_time(&tm, "%Y/%m/%d %H:%M:%S");
@@ -88,14 +90,13 @@ static bool yes_no(const T1& known_str, const T2& user_str) {
 }
 
 /**
- * @brief 严禁侵权，盗版必究
  * @brief 高精度安全忙等待时钟函数
- * @param nanoseconds 等待时间（纳秒）
+ * @param milliseconds 等待时间（毫秒）
  * @param mode 自旋模式：1-高精度自旋, 2-混合自旋, 3-节能自旋, 4-智能切换(默认)
  */
 static void sleep(int milliseconds, int mode = 4) {
     auto start = std::chrono::high_resolution_clock::now();
-    auto ns_duration = std::chrono::nanoseconds(milliseconds * 1000000LL);
+    auto ns_duration = std::chrono::nanoseconds(static_cast<long long>(milliseconds) * 1000000LL);
 
     switch (mode) {
     case 1: // 高精度自旋
@@ -127,7 +128,7 @@ static void sleep(int milliseconds, int mode = 4) {
         break;
 
     case 4: // 智能切换（默认）
-    default:
+    default: {
         auto elapsed = std::chrono::high_resolution_clock::now() - start;
         while (elapsed < ns_duration) {
             auto remaining = ns_duration - elapsed;
@@ -146,6 +147,7 @@ static void sleep(int milliseconds, int mode = 4) {
             elapsed = std::chrono::high_resolution_clock::now() - start;
         }
         break;
+    }
     }
 }
 
@@ -349,24 +351,24 @@ static std::string calculateKeyEntropy(const std::string& key) {
         return "弱"; // 空密钥直接返回弱
     }
 
-    // 统计每个字符出现的频率[7](@ref)
-    std::map<char, int> frequencyMap;
-    for (char c : key) {
+    // 统计每个字符出现的频率
+    std::map<unsigned char, int> frequencyMap;
+    for (unsigned char c : key) {
         frequencyMap[c]++;
     }
 
-    // 计算香农熵[7](@ref)
+    // 计算香农熵
     double entropy = 0.0;
     size_t keyLength = key.length();
 
     for (const auto& pair : frequencyMap) {
         double probability = static_cast<double>(pair.second) / keyLength;
         if (probability > 0) {
-            entropy -= probability * log2(probability);
+            entropy -= probability * std::log2(probability);
         }
     }
 
-    // 根据熵值范围返回对应的强度描述[1,4](@ref)
+    // 根据熵值范围返回对应的强度描述
     int entropyScore = static_cast<int>(entropy * 10); // 放大10倍便于分级
 
     if (entropyScore >= 91) return "极强";
@@ -430,3 +432,233 @@ static void secure_clean(std::string& str) {
     str.clear();
     str.shrink_to_fit();
 }
+
+// ============================================================================
+// Production-level Security Enhancement - Argon2 Edition
+// ============================================================================
+
+// Salt generation function
+static std::vector<uint8_t> generateSalt(size_t length = 16) {
+    std::vector<uint8_t> salt(length);
+    std::random_device rd;
+    for (size_t i = 0; i < length; ++i) {
+        salt[i] = static_cast<uint8_t>(rd() & 0xFF);
+    }
+    return salt;
+}
+
+// Secure memory cleanup wrapper (RAII)
+class SecureMemoryGuard {
+private:
+    std::vector<uint8_t>* data;
+
+public:
+    explicit SecureMemoryGuard(std::vector<uint8_t>* ptr) : data(ptr) {}
+
+    ~SecureMemoryGuard() {
+        if (data) {
+            std::fill(data->begin(), data->end(), 0);
+            data->clear();
+            data->shrink_to_fit();
+        }
+    }
+
+    SecureMemoryGuard(const SecureMemoryGuard&) = delete;
+    SecureMemoryGuard& operator=(const SecureMemoryGuard&) = delete;
+};
+
+// Account lockout manager
+class AccountLockoutManager {
+private:
+    std::string lockout_file;
+    static constexpr int MAX_FAILED_ATTEMPTS = 3;
+    static constexpr long long LOCKOUT_DURATION_SECONDS = 600;  // 10 minutes
+
+    struct LockoutRecord {
+        int failed_count;
+        std::chrono::system_clock::time_point lockout_time;
+    };
+
+public:
+    explicit AccountLockoutManager(const std::string& data_dir = ".") {
+        lockout_file = data_dir + "/lockout.dat";
+    }
+
+    bool isAccountLocked() {
+        std::ifstream file(lockout_file, std::ios::binary);
+        if (!file) {
+            return false;  // File not found, account not locked
+        }
+
+        int failed_count = 0;
+        long long lockout_time_us = 0;
+
+        file.read(reinterpret_cast<char*>(&failed_count), sizeof(failed_count));
+        file.read(reinterpret_cast<char*>(&lockout_time_us), sizeof(lockout_time_us));
+        file.close();
+
+        if (failed_count < MAX_FAILED_ATTEMPTS) {
+            return false;
+        }
+
+        auto lockout_tp = std::chrono::system_clock::time_point(
+            std::chrono::microseconds(lockout_time_us));
+        auto now = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lockout_tp).count();
+
+        if (elapsed >= LOCKOUT_DURATION_SECONDS) {
+            // Lockout expired, clear record
+            std::remove(lockout_file.c_str());
+            return false;
+        }
+
+        return true;
+    }
+
+    int getRemainingLockoutTime() const {
+        std::ifstream file(lockout_file, std::ios::binary);
+        if (!file) return 0;
+
+        int failed_count = 0;
+        long long lockout_time_us = 0;
+
+        file.read(reinterpret_cast<char*>(&failed_count), sizeof(failed_count));
+        file.read(reinterpret_cast<char*>(&lockout_time_us), sizeof(lockout_time_us));
+        file.close();
+
+        if (failed_count < MAX_FAILED_ATTEMPTS) {
+            return 0;
+        }
+
+        auto lockout_tp = std::chrono::system_clock::time_point(
+            std::chrono::microseconds(lockout_time_us));
+        auto now = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lockout_tp).count();
+
+        return max(0ll, LOCKOUT_DURATION_SECONDS - elapsed);
+    }
+
+    void recordFailedAttempt() const {
+        std::ifstream file(lockout_file, std::ios::binary);
+        int failed_count = 0;
+        long long lockout_time_us = 0;
+
+        if (file) {
+            file.read(reinterpret_cast<char*>(&failed_count), sizeof(failed_count));
+            file.read(reinterpret_cast<char*>(&lockout_time_us), sizeof(lockout_time_us));
+            file.close();
+        }
+
+        failed_count++;
+
+        std::ofstream outfile(lockout_file, std::ios::binary | std::ios::trunc);
+        if (!outfile) return;
+
+        auto now = std::chrono::system_clock::now();
+        lockout_time_us = now.time_since_epoch().count() / 1000;  // Convert to microseconds
+
+        outfile.write(reinterpret_cast<const char*>(&failed_count), sizeof(failed_count));
+        outfile.write(reinterpret_cast<const char*>(&lockout_time_us), sizeof(lockout_time_us));
+        outfile.close();
+    }
+
+    void recordSuccessfulAttempt() {
+        // Clear failed record
+        std::remove(lockout_file.c_str());
+    }
+
+    int getFailedAttempts() const {
+        std::ifstream file(lockout_file, std::ios::binary);
+        if (!file) return 0;
+
+        int failed_count = 0;
+        file.read(reinterpret_cast<char*>(&failed_count), sizeof(failed_count));
+        file.close();
+
+        return std::min(failed_count, MAX_FAILED_ATTEMPTS);
+    }
+};
+
+// Enhanced audit logger class
+class AuditLogger {
+private:
+    std::ofstream log_file;
+    std::string log_path;
+    static constexpr size_t MAX_LOG_SIZE = 10 * 1024 * 1024;  // 10 MB
+
+    void ensureOpen() {
+        if (!log_file.is_open()) {
+            log_file.open(log_path, std::ios::app);
+        }
+    }
+
+    void rotateIfNeeded() {
+        log_file.seekp(0, std::ios::end);
+        auto pos = log_file.tellp();
+        if (pos != std::ofstream::pos_type(-1) &&
+            static_cast<std::streamoff>(pos) > static_cast<std::streamoff>(MAX_LOG_SIZE)) {
+            log_file.close();
+
+            auto now = std::chrono::system_clock::now();
+            auto time_val = std::chrono::system_clock::to_time_t(now);
+            std::ostringstream backup_name;
+            backup_name << log_path << ".bak." << time_val;
+
+            std::rename(log_path.c_str(), backup_name.str().c_str());
+            log_file.open(log_path, std::ios::app);
+        }
+    }
+
+public:
+    explicit AuditLogger(const std::string& path) : log_path(path) {
+        ensureOpen();
+    }
+
+    ~AuditLogger() {
+        if (log_file.is_open()) {
+            log_file.close();
+        }
+    }
+
+    void logAuthAttempt(bool success, int remaining_attempts = -1) {
+        ensureOpen();
+        rotateIfNeeded();
+
+        auto time_str = getCurrentTime();
+        log_file << "[" << time_str << "] AUTH_ATTEMPT: " 
+                 << (success ? "SUCCESS" : "FAILED");
+        if (remaining_attempts >= 0) {
+            log_file << " (Remaining: " << remaining_attempts << ")";
+        }
+        log_file << std::endl;
+        log_file.flush();
+    }
+
+    void logAccountLockout(int duration_seconds) {
+        ensureOpen();
+        rotateIfNeeded();
+
+        auto time_str = getCurrentTime();
+        log_file << "[" << time_str << "] ACCOUNT_LOCKOUT: " 
+                 << "Locked for " << duration_seconds << " seconds" << std::endl;
+        log_file.flush();
+    }
+
+    void logPasswordChange() {
+        ensureOpen();
+        rotateIfNeeded();
+
+        auto time_str = getCurrentTime();
+        log_file << "[" << time_str << "] PASSWORD_CHANGED" << std::endl;
+        log_file.flush();
+    }
+
+    void logSecurityEvent(const std::string& event_description) {
+        ensureOpen();
+        rotateIfNeeded();
+
+        auto time_str = getCurrentTime();
+        log_file << "[" << time_str << "] SECURITY_EVENT: " << event_description << std::endl;
+        log_file.flush();
+    }
+};

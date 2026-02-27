@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="src\AES256.h" />
     <ClInclude Include="src\best_hash.h" />
+    <ClInclude Include="src\SecurityUtilsCrossplatform.h" />
     <ClInclude Include="src\Tollbox.h" />
   </ItemGroup>
   <ItemGroup>
@@ -29,16 +30,25 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="CROSSPLATFORM_CHECKLIST.md" />
+    <None Include="CROSSPLATFORM_SUMMARY.md" />
     <None Include="docs\ARGON2_IMPLEMENTATION.md" />
     <None Include="docs\ARGON2_QUICK_REFERENCE.md" />
+    <None Include="docs\CROSSPLATFORM_GUIDE.md" />
+    <None Include="docs\CROSSPLATFORM_QUICKSTART.md" />
     <None Include="docs\DETAILED_COMPARISON.md" />
     <None Include="docs\OPTIMIZATION_CHECKLIST.md" />
     <None Include="docs\PERFORMANCE_ANALYSIS.md" />
     <None Include="docs\QUICK_START.md" />
+    <None Include="docs\SECURITY_ASSESSMENT.md" />
+    <None Include="docs\SECURITY_IMPLEMENTATION_GUIDE.md" />
+    <None Include="docs\SECURITY_QUICK_START.md" />
+    <None Include="docs\SECURITY_REFERENCE_CARD.md" />
     <None Include="docs\UPGRADE_SUMMARY.md" />
     <None Include="PROJECT_COMPLETION_REPORT.md" />
     <None Include="README_ARGON2.md" />
     <None Include="RUNTIME_ANALYSIS_SUMMARY.md" />
+    <None Include="SECURITY_EXECUTIVE_SUMMARY.md" />
     <None Include="项目简介.md" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

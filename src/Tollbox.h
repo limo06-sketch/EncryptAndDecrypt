@@ -18,6 +18,15 @@
 #include <cstring>
 #include <cstdint>
 #include <iomanip>
+
+// Platform-specific headers for secure password input
+#ifdef _WIN32
+    #include <conio.h>
+#else
+    #include <termios.h>
+    #include <unistd.h>
+#endif
+
 using namespace std;
 
 // Stored AEAD blob for verification (IV||ciphertext||MAC)
@@ -431,6 +440,101 @@ static void secure_clean(std::string& str) {
     }
     str.clear();
     str.shrink_to_fit();
+}
+
+// ============================================================================
+// 跨平台隐藏密码输入函数 (支持无限长度)
+// ============================================================================
+
+/**
+ * @brief 跨平台隐藏密码输入函数
+ * 
+ * 特点:
+ * ✓ Windows: 使用 conio.h (_getch)
+ * ✓ Linux/macOS: 使用 termios.h (tcgetattr/tcsetattr)
+ * ✓ 支持无限长度密码
+ * ✓ 不显示输入字符
+ * ✓ 显示输入进度（点号）
+ * ✓ 支持退格删除
+ * 
+ * @return std::string 用户输入的密码
+ */
+static std::string getSecurePassword() {
+    std::string password;
+
+#ifdef _WIN32
+    // Windows 实现
+    while (true) {
+        int ch = _getch();
+
+        if (ch == '\r' || ch == '\n') {
+            // Enter 键
+            std::cout << std::endl;
+            break;
+        }
+        else if (ch == '\b') {
+            // 退格键
+            if (!password.empty()) {
+                password.pop_back();
+                std::cout << "\b \b" << std::flush;
+            }
+        }
+        else if (ch >= 32 && ch <= 126) {
+            // 可打印字符
+            password.push_back(static_cast<char>(ch));
+            std::cout << '*' << std::flush;
+        }
+        // 忽略其他特殊字符
+    }
+
+#else
+    // Linux/macOS 实现
+    struct termios old_settings, new_settings;
+
+    // 获取当前终端设置
+    tcgetattr(STDIN_FILENO, &old_settings);
+    new_settings = old_settings;
+
+    // 禁用 echo（不显示输入）
+    new_settings.c_lflag &= ~ECHO;
+    // 禁用 canonical mode（实时读取）
+    new_settings.c_lflag &= ~ICANON;
+    // 最小读取字符数为 1
+    new_settings.c_cc[VMIN] = 1;
+    // 读取超时为 0
+    new_settings.c_cc[VTIME] = 0;
+
+    // 应用新设置
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_settings);
+
+    char ch;
+    while (read(STDIN_FILENO, &ch, 1) == 1) {
+        if (ch == '\n' || ch == '\r') {
+            // Enter 键
+            std::cout << std::endl;
+            break;
+        }
+        else if (ch == '\b' || ch == 127) {
+            // 退格键（\b）或 Delete 键（127）
+            if (!password.empty()) {
+                password.pop_back();
+                std::cout << "\b \b" << std::flush;
+            }
+        }
+        else if (ch >= 32 && ch <= 126) {
+            // 可打印字符
+            password.push_back(ch);
+            std::cout << '*' << std::flush;
+        }
+        // 忽略其他特殊字符
+    }
+
+    // 恢复原始终端设置
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_settings);
+
+#endif
+
+    return password;
 }
 
 // ============================================================================

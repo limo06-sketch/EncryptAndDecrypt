@@ -1,7 +1,7 @@
 // Argon2-inspired KDF Encryption Program
 // Features: Argon2 memory-hard key derivation + AES-256 AEAD encryption
-// Security: 9.5/10 with memory-hard resistance to GPU/ASIC attacks
-// Performance: ~90ms per key derivation with full memory-hard protection
+//           Account lockout + Audit logging + Timing attack prevention
+// Security: 9.5/10 with memory-hard resistance to GPU/ASIC attacks + protections
 
 #include "Tollbox.h"
 using namespace std;
@@ -9,6 +9,10 @@ using namespace std;
 int main()
 {
     std::cout << "\x1b[36m" << std::flush;
+
+    // Initialize security managers
+    AccountLockoutManager lockout_manager(".");
+    AuditLogger audit_log("auth.log");
 
     // Create key and pass to AES object
     // AES256 constructor automatically:
@@ -63,8 +67,21 @@ int main()
     cerr << "Enter password to access encryption program\n>>";
 
     while (true) {
+        // Check if account is locked
+        if (lockout_manager.isAccountLocked()) {
+            int remaining = lockout_manager.getRemainingLockoutTime();
+            cerr << "\x1b[31m[!] Account locked. Remaining: " << remaining << "s\x1b[36m" << endl;
+            audit_log.logSecurityEvent("LOGIN_ATTEMPT_WHILE_LOCKED");
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            continue;
+        }
+
         cin.clear();
-        getline(cin, user_input);
+
+        // Get password with hidden input
+        cerr << "[>] Password: ";
+        user_input = getSecurePassword();
+
         cout << "Current password entropy: " << calculateKeyEntropy(user_input) << endl;
 
         std::vector<uint8_t> user_bytes(user_input.begin(), user_input.end());
@@ -95,39 +112,46 @@ int main()
             outFile << "Time: " << getCurrentTime() << endl;
             outFile.close();
 
-            cerr << "\x1b[32mAuthentication successful\x1b[36m" << endl;
+            cerr << "\x1b[32m[+] Authentication successful\x1b[36m" << endl;
+
+            // Log successful authentication
+            audit_log.logAuthAttempt(true);
+            lockout_manager.recordSuccessfulAttempt();
             break;
         }
         else {
-            cerr << "\x1b[31mIncorrect password, please try again\x1b[36m\n>>";
-            cin.clear();
+            cerr << "\x1b[31m[-] Incorrect password\x1b[36m" << endl;
+
+            // Fixed delay to prevent timing attacks
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            // Record failed attempt
             ++cnt_er;
-            cout.clear();
+            lockout_manager.recordFailedAttempt();
+            int failed_count = lockout_manager.getFailedAttempts();
+            int remaining = 3 - failed_count;
 
-            if (cnt_er > max_er) {
-                cin.clear();
-                cout.clear();
-                ++cnt_er_er;
+            // Log failed authentication
+            audit_log.logAuthAttempt(false, remaining);
 
-                size_t cnt_time = 13;
-                clog << "\x1b[31mToo many failed attempts. Account locked.\x1b[36m" << endl;
+            if (lockout_manager.isAccountLocked()) {
+                cerr << "\x1b[31m[!] Too many attempts. Account locked for 10 minutes.\x1b[36m" << endl;
+                audit_log.logAccountLockout(600);
 
-                for (size_t i = cnt_time; i > 0; --i) {
-                    clog << "Remaining: " << i << "s\r" << flush;
+                // Display countdown
+                for (int i = 600; i > 0; --i) {
+                    cerr << "[*] Remaining: " << i << "s\r" << flush;
                     std::this_thread::sleep_for(std::chrono::seconds(1));
                 }
-
-                cnt_er = 0;
-                clog << "\x1b[32mLockout released. Please try again.\x1b[36m\n>>" << flush;
-                cout << endl;
-            }
-            else {
-                if (cnt_er_er > max_er) {
-                    cerr << "Error count too high, process aborted." << endl;
-                    return -1;
-                }
+                cerr << "\n[*] Lockout released. Try again.\n" << flush;
+            } else {
+                cerr << "[*] Attempts left: " << remaining << endl;
+                cerr << "[>] Password: ";
             }
         }
+
+        // Clean up password
+        secure_clean(user_input);
         cin.clear();
     };
 

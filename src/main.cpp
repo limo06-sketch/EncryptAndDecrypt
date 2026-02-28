@@ -1,9 +1,11 @@
 // Argon2-inspired KDF Encryption Program
 // Features: Argon2 memory-hard key derivation + AES-256 AEAD encryption
 //           Account lockout + Audit logging + Timing attack prevention
+//           Enhanced with SecurityUtilsCrossplatform validators
 // Security: 9.5/10 with memory-hard resistance to GPU/ASIC attacks + protections
 
 #include "Tollbox.h"
+#include "SecurityUtilsCrossplatform.h"
 using namespace std;
 
 int main()
@@ -48,6 +50,13 @@ int main()
     std::string filePath = "test.txt";
     std::string filePath_game = "game.txt";
 
+    // Validate file paths (prevent path traversal attacks)
+    if (!InputValidator::validateFilePath(filePath) || 
+        !InputValidator::validateFilePath(filePath_game)) {
+        std::cerr << "Error: Invalid file path detected!" << std::endl;
+        return -1;
+    }
+
     std::ofstream outFile(filePath, ios::app);
     std::fstream max_f(filePath_game, std::ios::in | std::ios::out | ios::app);
 
@@ -82,6 +91,16 @@ int main()
         cerr << "[>] Password: ";
         user_input = getSecurePassword();
 
+        // Validate password format and strength
+        try {
+            user_input = InputValidator::validatePassword(user_input);
+        }
+        catch (const std::invalid_argument& e) {
+            std::cerr << "\x1b[33m[!] Password validation warning: " << e.what() << "\x1b[36m" << std::endl;
+            std::cerr << "[*] Allowing continued... (Enter to retry, or continue)" << std::endl;
+            // Continue anyway, but user is warned
+        }
+
         cout << "Current password entropy: " << calculateKeyEntropy(user_input) << endl;
 
         std::vector<uint8_t> user_bytes(user_input.begin(), user_input.end());
@@ -110,11 +129,13 @@ int main()
         if (auth_ok) {
             outFile << "Authentication successful!" << endl;
             outFile << "Time: " << getCurrentTime() << endl;
+            outFile << "Password Entropy: " << calculateKeyEntropy(user_input) << endl;
             outFile.close();
 
             cerr << "\x1b[32m[+] Authentication successful\x1b[36m" << endl;
 
-            // Log successful authentication
+            // Log successful authentication with details
+            audit_log.logSecurityEvent("AUTHENTICATION_SUCCESS_WITH_ENTROPY:" + calculateKeyEntropy(user_input));
             audit_log.logAuthAttempt(true);
             lockout_manager.recordSuccessfulAttempt();
             break;
@@ -131,7 +152,8 @@ int main()
             int failed_count = lockout_manager.getFailedAttempts();
             int remaining = 3 - failed_count;
 
-            // Log failed authentication
+            // Log failed authentication with more details
+            audit_log.logSecurityEvent("AUTHENTICATION_FAILED_ATTEMPT:" + std::to_string(failed_count));
             audit_log.logAuthAttempt(false, remaining);
 
             if (lockout_manager.isAccountLocked()) {
@@ -157,6 +179,9 @@ int main()
 
     clog << "\x1b[2J\x1b[1;1H" << flush;
 
+    // Log successful program entry
+    audit_log.logSecurityEvent("PROGRAM_ENTRY_AFTER_AUTHENTICATION");
+
     {
         cout << "Loading..." << endl;
         const int len = 100;
@@ -167,6 +192,13 @@ int main()
         }
         cout << endl;
         cout << "Loading complete" << endl;
+    }
+
+    // Additional security: Re-validate file paths before game loop
+    if (!InputValidator::validateFilePath(filePath_game)) {
+        std::cerr << "Error: Game file path validation failed!" << std::endl;
+        audit_log.logSecurityEvent("FILE_PATH_VALIDATION_FAILED_IN_GAME_LOOP");
+        return -1;
     }
 
     while (true)
@@ -203,6 +235,9 @@ int main()
             break;
         }
     }
+
+    // Log program exit
+    audit_log.logSecurityEvent("PROGRAM_EXIT_NORMAL");
 
     std::cout << "\x1b[0m" << std::endl;
     return 0;

@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <memory>
 #include <algorithm>
+#include "argon2id.h"
+#include "secure_random.h"
 
 class AES256 {
 public:
@@ -41,17 +43,6 @@ private:
     std::vector<uint32_t> roundKeys;
     std::vector<uint8_t> salt;  // 每个实例的随机盐值
 
-    // Enhanced security components
-    class SecureRandom {
-    private:
-        std::random_device rd; // use std::random_device as CSPRNG source when available
-
-    public:
-        SecureRandom();
-        void generate(uint8_t* buffer, size_t size);
-        std::vector<uint8_t> generateVector(size_t size);
-    };
-
     // Core cryptographic operations
     void keyExpansion(const std::vector<uint8_t>& key);
     std::vector<uint8_t> generateSecureIV();
@@ -81,6 +72,10 @@ private:
 
     // Security enhancement: derive key with salt
     std::vector<uint8_t> deriveKey(const std::vector<uint8_t>& password, 
+                                    const std::vector<uint8_t>& salt);
+
+    // 遗留的密钥派生函数（已弃用，仅用于后向兼容）
+    std::vector<uint8_t> deriveKey_Legacy(const std::vector<uint8_t>& password, 
                                     const std::vector<uint8_t>& salt);
 
     // 新增：CTR模式辅助函数

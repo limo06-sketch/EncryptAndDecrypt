@@ -205,3 +205,21 @@ void SecureHash::keyStrengthening(uint64_t state[STATE_SIZE], const std::vector<
         }
     }
 }
+
+// 使用ARGON2ID的密钥派生函数
+std::vector<uint8_t> SecureHash::keyDerivationArgon2id(
+    const std::vector<uint8_t>& password,
+    const std::vector<uint8_t>& salt,
+    size_t output_length,
+    const Argon2id::Parameters& params) {
+
+    if (password.empty()) {
+        throw std::invalid_argument("密码不能为空");
+    }
+
+    // 使用ARGON2ID进行密钥派生
+    Argon2id::Parameters final_params = params;
+    final_params.output_length = static_cast<uint32_t>(output_length);
+
+    return Argon2id::derive(password, salt, final_params);
+}

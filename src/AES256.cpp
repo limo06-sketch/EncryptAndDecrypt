@@ -52,31 +52,8 @@ const uint32_t AES256::RCON[10] = {
     0x1B000000, 0x36000000
 };
 
-// SecureRandom implementation - 改进的可靠性版本
-AES256::SecureRandom::SecureRandom() {
-    // std::random_device initialization - no explicit seeding needed
-}
-
-void AES256::SecureRandom::generate(uint8_t* buffer, size_t size) {
-    static std::random_device rd;  // 单一全局实例以提高熵
-
-    for (size_t i = 0; i < size; ++i) {
-        // 多次调用std::random_device以增加熵
-        unsigned int v1 = rd();
-        unsigned int v2 = rd();
-        unsigned int v3 = rd();
-
-        // 混合多个随机值
-        unsigned int mixed = (v1 ^ v2) + v3;
-        buffer[i] = static_cast<uint8_t>((mixed >> (i % 4)) & 0xFF);
-    }
-}
-
-std::vector<uint8_t> AES256::SecureRandom::generateVector(size_t size) {
-    std::vector<uint8_t> result(size);
-    generate(result.data(), size);
-    return result;
-}
+// SecureRandom implementation - 已移至secure_random.h/cpp
+// 这里保留为兼容性说明
 
 // Constructor
 AES256::AES256(const std::vector<uint8_t>& key) {
@@ -116,8 +93,22 @@ AES256::~AES256() {
     constantTimeMemZero(roundKeys.data(), roundKeys.size() * sizeof(uint32_t));
 }
 
-// Argon2-inspired memory-hard key derivation function
+// 完整的密钥派生函数 - 现在使用ARGON2ID
 std::vector<uint8_t> AES256::deriveKey(const std::vector<uint8_t>& password, 
+                                        const std::vector<uint8_t>& salt) {
+    // 使用ARGON2ID进行密钥派生 - 强度参数设置
+    // 输出64字节用于分割成加密密钥(32字节)和MAC密钥(32字节)
+
+    Argon2id::Parameters params = Argon2id::STRONG;
+    params.output_length = 64;  // 64字节输出
+
+    std::vector<uint8_t> derived_key = Argon2id::derive(password, salt, params);
+
+    return derived_key;
+}
+
+// 以下代码保留用于后向兼容性，但已弃用
+std::vector<uint8_t> AES256::deriveKey_Legacy(const std::vector<uint8_t>& password, 
                                         const std::vector<uint8_t>& salt) {
     // Argon2参数配置
     const uint32_t memory_size = 262144;  // 64KB内存块（可调整为更高以增加安全性）

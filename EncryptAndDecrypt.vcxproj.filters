@@ -27,12 +27,39 @@
     <ClInclude Include="src\SecurityUtilsCrossplatform.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\argon2id.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\blake2b.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\secure_random.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\platform_config.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\crypto_utils.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AES256.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\best_hash.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\blake2b.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\argon2id.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\secure_random.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\crypto_utils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp">
@@ -60,5 +87,22 @@
     <None Include="docs\CROSSPLATFORM_QUICKSTART.md" />
     <None Include="CROSSPLATFORM_SUMMARY.md" />
     <None Include="CROSSPLATFORM_CHECKLIST.md" />
+    <None Include="CRYPTO_IMPLEMENTATION.md" />
+    <None Include="COMPLETION_SUMMARY.md" />
+    <None Include="QUICK_REFERENCE.md" />
+    <None Include="README.md" />
+    <None Include="CHECKLIST.md" />
+    <None Include="DEVELOPER_GUIDE.md" />
+    <None Include="PROJECT_STATISTICS.md" />
+    <None Include="PROJECT_OVERVIEW.md" />
+    <None Include="MAIN_INTEGRATION_SUMMARY.md" />
+    <None Include="ENHANCED_MAIN_USAGE_GUIDE.md" />
+    <None Include="MAIN_COMPLETE_VERIFICATION.md" />
+    <None Include="QUICK_REFERENCE_ENHANCED.md" />
+    <None Include="INTEGRATION_COMPLETION_CHECKLIST.md" />
+    <None Include="MAIN_DELIVERY_CHECKLIST.md" />
+    <None Include="DOCUMENTATION_INDEX.md" />
+    <None Include="PROJECT_COMPLETION_SUMMARY.md" />
+    <None Include="README_PROJECT_COMPLETION.md" />
   </ItemGroup>
 </Project>

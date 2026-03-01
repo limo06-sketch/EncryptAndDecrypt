@@ -10,6 +10,7 @@
 #include <random>
 #include <chrono>
 #include <mutex>
+#include "argon2id.h"
 
 class SecureHash {
 private:
@@ -53,8 +54,16 @@ private:
     // 安全内存清理声明
     static void secureMemZero(void* ptr, size_t len);
 
-    // 增强密钥派生函数声明
+    // 增强密钥派生函数声明 - 已弃用，使用keyDerivationArgon2id代替
     static void keyStrengthening(uint64_t state[STATE_SIZE], const std::vector<uint8_t>& data);
+
+    // 使用ARGON2ID的密钥派生函数
+    static std::vector<uint8_t> keyDerivationArgon2id(
+        const std::vector<uint8_t>& password,
+        const std::vector<uint8_t>& salt,
+        size_t output_length = 32,
+        const Argon2id::Parameters& params = Argon2id::DEFAULTS
+    );
 
     // 序列化模板 (在头文件中实现，因为它是模板)
     template<typename T>

@@ -20,18 +20,31 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\AES256.h" />
+    <ClInclude Include="src\argon2id.h" />
     <ClInclude Include="src\best_hash.h" />
+    <ClInclude Include="src\blake2b.h" />
+    <ClInclude Include="src\crypto_utils.h" />
+    <ClInclude Include="src\platform_config.h" />
+    <ClInclude Include="src\secure_random.h" />
     <ClInclude Include="src\SecurityUtilsCrossplatform.h" />
     <ClInclude Include="src\Tollbox.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AES256.cpp" />
+    <ClCompile Include="src\argon2id.cpp" />
     <ClCompile Include="src\best_hash.cpp" />
+    <ClCompile Include="src\blake2b.cpp" />
+    <ClCompile Include="src\crypto_utils.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\secure_random.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="CHECKLIST.md" />
+    <None Include="COMPLETION_SUMMARY.md" />
     <None Include="CROSSPLATFORM_CHECKLIST.md" />
     <None Include="CROSSPLATFORM_SUMMARY.md" />
+    <None Include="CRYPTO_IMPLEMENTATION.md" />
+    <None Include="DEVELOPER_GUIDE.md" />
     <None Include="docs\ARGON2_IMPLEMENTATION.md" />
     <None Include="docs\ARGON2_QUICK_REFERENCE.md" />
     <None Include="docs\CROSSPLATFORM_GUIDE.md" />
@@ -45,8 +58,21 @@
     <None Include="docs\SECURITY_QUICK_START.md" />
     <None Include="docs\SECURITY_REFERENCE_CARD.md" />
     <None Include="docs\UPGRADE_SUMMARY.md" />
+    <None Include="DOCUMENTATION_INDEX.md" />
+    <None Include="ENHANCED_MAIN_USAGE_GUIDE.md" />
+    <None Include="INTEGRATION_COMPLETION_CHECKLIST.md" />
+    <None Include="MAIN_COMPLETE_VERIFICATION.md" />
+    <None Include="MAIN_DELIVERY_CHECKLIST.md" />
+    <None Include="MAIN_INTEGRATION_SUMMARY.md" />
     <None Include="PROJECT_COMPLETION_REPORT.md" />
+    <None Include="PROJECT_COMPLETION_SUMMARY.md" />
+    <None Include="PROJECT_OVERVIEW.md" />
+    <None Include="PROJECT_STATISTICS.md" />
+    <None Include="QUICK_REFERENCE.md" />
+    <None Include="QUICK_REFERENCE_ENHANCED.md" />
+    <None Include="README.md" />
     <None Include="README_ARGON2.md" />
+    <None Include="README_PROJECT_COMPLETION.md" />
     <None Include="RUNTIME_ANALYSIS_SUMMARY.md" />
     <None Include="SECURITY_EXECUTIVE_SUMMARY.md" />
     <None Include="项目简介.md" />

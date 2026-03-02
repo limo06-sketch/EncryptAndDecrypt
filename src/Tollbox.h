@@ -319,29 +319,190 @@ static void simple_progress(int current, int total, int width = 20) {
     std::cout.flush();
 }
 
-// 编译时字符串加密函数
+// ============================================================================
+// 编译时动态密钥生成系统 - 防彩虹表
+// ============================================================================
+
+/**
+ * @brief 编译时伪随机数生成器（基于__TIME__和__DATE__）
+ * 每次编译时生成完全不同的密钥序列
+ */
+class CompileTimeRNG {
+private:
+    // 简单的LCG算法常数
+    static constexpr uint32_t LCG_A = 1664525U;
+    static constexpr uint32_t LCG_C = 1013904223U;
+    static constexpr uint32_t LCG_M = 4294967296ULL;
+
+    /**
+     * @brief 编译时哈希函数，基于__TIME__和__DATE__
+     * 将时间戳转换为伪随机种子
+     */
+    static constexpr uint32_t compile_time_seed() {
+        // __TIME__ 格式: "HH:MM:SS"
+        // __DATE__ 格式: "Mon DD YYYY"
+        const char* time_str = __TIME__;
+        const char* date_str = __DATE__;
+
+        uint32_t hash = 5381;
+
+        // 对时间字符串进行哈希
+        for (size_t i = 0; time_str[i]; ++i) {
+            hash = ((hash << 5) + hash) + static_cast<uint32_t>(time_str[i]);
+        }
+
+        // 对日期字符串进行哈希
+        for (size_t i = 0; date_str[i]; ++i) {
+            hash = ((hash << 5) + hash) + static_cast<uint32_t>(date_str[i]);
+        }
+
+        return hash ^ 0xDEADBEEF;
+    }
+
+    /**
+     * @brief 生成编译时伪随机数
+     * 使用LCG（线性同余生成器）
+     */
+    static constexpr uint32_t lcg_next(uint32_t& state) {
+        state = (state * LCG_A + LCG_C);
+        return state;
+    }
+
+public:
+    /**
+     * @brief 生成动态的密钥表数组
+     * @tparam N 要生成的密钥个数
+     * @return std::array<uint8_t, N> 包含N个伪随机密钥字节
+     */
+    template<size_t N>
+    static constexpr std::array<uint8_t, N> generate_keys() {
+        std::array<uint8_t, N> keys{};
+        uint32_t state = compile_time_seed();
+
+        for (size_t i = 0; i < N; ++i) {
+            keys[i] = static_cast<uint8_t>((lcg_next(state) >> 8) & 0xFF);
+        }
+
+        return keys;
+    }
+
+    /**
+     * @brief 生成动态的费舍尔-耶茨S-Box
+     * 每次编译生成完全不同的非线性替换表
+     * @return std::array<uint8_t, 256> 伪随机排列的256元素数组
+     */
+    static constexpr std::array<uint8_t, 256> generate_sbox() {
+        std::array<uint8_t, 256> sbox{};
+
+        // 初始化为0-255
+        for (size_t i = 0; i < 256; ++i) {
+            sbox[i] = static_cast<uint8_t>(i);
+        }
+
+        // 费舍尔-耶茨洗牌算法（编译时版本）
+        uint32_t state = compile_time_seed();
+        for (size_t i = 255; i > 0; --i) {
+            // 生成随机索引
+            uint32_t rand_val = lcg_next(state);
+            size_t j = (rand_val ^ (rand_val >> 16)) % (i + 1);
+
+            // 交换
+            uint8_t temp = sbox[i];
+            sbox[i] = sbox[j];
+            sbox[j] = temp;
+        }
+
+        return sbox;
+    }
+
+    /**
+     * @brief 生成反向S-Box（用于解密）
+     * @param sbox 原始的S-Box表
+     * @return std::array<uint8_t, 256> 反向S-Box
+     */
+    static constexpr std::array<uint8_t, 256> generate_inv_sbox(const std::array<uint8_t, 256>& sbox) {
+        std::array<uint8_t, 256> inv_sbox{};
+
+        for (size_t i = 0; i < 256; ++i) {
+            inv_sbox[sbox[i]] = static_cast<uint8_t>(i);
+        }
+
+        return inv_sbox;
+    }
+};
+
+// ============================================================================
+// 在编译时生成动态的密钥和S-Box
+// 每次编译都完全不同，防止彩虹表攻击
+// ============================================================================
+
+// 生成10个动态异或密钥
+constexpr auto DYNAMIC_XOR_KEYS = CompileTimeRNG::generate_keys<10>();
+
+// 生成8个动态替换密钥
+constexpr auto DYNAMIC_SUB_KEYS = CompileTimeRNG::generate_keys<8>();
+
+// 生成6个动态加法密钥
+constexpr auto DYNAMIC_ADD_KEYS = CompileTimeRNG::generate_keys<6>();
+
+// 生成动态的S-Box（每次编译都不同）
+constexpr auto DYNAMIC_SBOX = CompileTimeRNG::generate_sbox();
+
+// 生成对应的反向S-Box
+constexpr auto DYNAMIC_INV_SBOX = CompileTimeRNG::generate_inv_sbox(DYNAMIC_SBOX);
+
+// 编译时字符串加密函数 - 增强型混淆
 template<size_t N>
 consteval auto compile_time_encrypt(const char(&str)[N]) {
-    // 使用多层异或混淆
-    constexpr uint8_t xor_keys[] = { 0xA5, 0x5A, 0x33, 0xCC, 0xF0, 0x0F };
-    constexpr size_t keys_count = sizeof(xor_keys);
+    // 使用编译时动态生成的密钥（每次编译都不同！）
+    constexpr auto xor_keys = DYNAMIC_XOR_KEYS;
+    constexpr size_t keys_count = xor_keys.size();
+
+    // 使用编译时动态生成的替换密钥
+    constexpr auto sub_keys = DYNAMIC_SUB_KEYS;
+    constexpr size_t sub_keys_count = sub_keys.size();
+
+    // 使用编译时动态生成的加法密钥
+    constexpr auto add_keys = DYNAMIC_ADD_KEYS;
+    constexpr size_t add_keys_count = add_keys.size();
+
+    // 使用编译时动态生成的S-Box（每次编译都不同！）
+    constexpr auto sbox = DYNAMIC_SBOX;
 
     std::array<uint8_t, N> result{};
 
-    // 多层混淆加密
+    // 超强多层混淆加密
     for (size_t i = 0; i < N - 1; ++i) {
         uint8_t val = static_cast<uint8_t>(str[i]);
 
-        // 第1层: 基于位置的异或
+        // ===== 第1层: 基于位置的异或混淆 =====
         val ^= xor_keys[i % keys_count];
-        // 第2层: 字节内位旋转
+
+        // ===== 第2层: 动态S-Box 替换 (AES风格的非线性变换) =====
+        val = sbox[val];
+
+        // ===== 第3层: 简单的左旋转8位（容易反向） =====
         val = (val << 3) | (val >> 5);
-        // 第3层: 与常量运算
+
+        // ===== 第4层: 与多个密钥的混合运算 =====
+        val ^= sub_keys[(i * 7) % sub_keys_count];
         val += static_cast<uint8_t>(i * 0x37) & 0xFF;
-        // 第4层: 位取反
+        val ^= sub_keys[(i * 13) % sub_keys_count];
+
+        // ===== 第5层: 位取反和异或 =====
         val = ~val;
-        // 第5层: 再次异或
+        val ^= add_keys[i % add_keys_count];
+
+        // ===== 第6层: 再次 动态S-Box 替换 =====
+        val = sbox[val];
+
+        // ===== 第7层: 最终异或混淆 =====
         val ^= xor_keys[(i + 3) % keys_count];
+        val ^= static_cast<uint8_t>((i * i + 0x5A) & 0xFF);
+
+        // ===== 第8层: 非线性加法 =====
+        val = (val + static_cast<uint8_t>(0x47 * (i + 1))) & 0xFF;
+        val ^= add_keys[(i * 11) % add_keys_count];
 
         result[i] = val;
     }
@@ -389,27 +550,56 @@ static std::string calculateKeyEntropy(const std::string& key) {
 }
 
 
-// 运行时解密函数
+// 运行时解密函数 - 增强型混淆解密
 template<size_t N>
 std::string runtime_decrypt(const std::array<uint8_t, N>& encrypted) {
-    constexpr uint8_t xor_keys[] = { 0xA5, 0x5A, 0x33, 0xCC, 0xF0, 0x0F };
-    constexpr size_t keys_count = sizeof(xor_keys);
+    // 必须与 compile_time_encrypt 的动态密钥保持一致
+    // 这些是在编译时生成的，每次编译都完全不同
+    constexpr auto xor_keys = DYNAMIC_XOR_KEYS;
+    constexpr size_t keys_count = xor_keys.size();
+
+    constexpr auto sub_keys = DYNAMIC_SUB_KEYS;
+    constexpr size_t sub_keys_count = sub_keys.size();
+
+    constexpr auto add_keys = DYNAMIC_ADD_KEYS;
+    constexpr size_t add_keys_count = add_keys.size();
+
+    // 使用编译时动态生成的反向S-Box
+    constexpr auto inv_sbox = DYNAMIC_INV_SBOX;
 
     char buffer[N]{};
 
-    // 反向解密操作
+    // 反向解密操作 (按倒序反向执行加密的所有步骤)
     for (size_t i = 0; i < N - 1; ++i) {
         uint8_t val = encrypted[i];
 
-        // 反向第5层: 异或
+        // ===== 反向第8层: 解除非线性加法 =====
+        val ^= add_keys[(i * 11) % add_keys_count];
+        val = (val - static_cast<uint8_t>(0x47 * (i + 1))) & 0xFF;
+
+        // ===== 反向第7层: 解除最终异或混淆 =====
+        val ^= static_cast<uint8_t>((i * i + 0x5A) & 0xFF);
         val ^= xor_keys[(i + 3) % keys_count];
-        // 反向第4层: 位取反
+
+        // ===== 反向第6层: 反向动态S-Box 替换 =====
+        val = inv_sbox[val];
+
+        // ===== 反向第5层: 解除位取反和异或 =====
+        val ^= add_keys[i % add_keys_count];
         val = ~val;
-        // 反向第3层: 与常量运算
+
+        // ===== 反向第4层: 解除与多个密钥的混合运算 =====
+        val ^= sub_keys[(i * 13) % sub_keys_count];
         val -= static_cast<uint8_t>(i * 0x37) & 0xFF;
-        // 反向第2层: 字节内位旋转
+        val ^= sub_keys[(i * 7) % sub_keys_count];
+
+        // ===== 反向第3层: 解除左旋转8位 =====
         val = (val >> 3) | (val << 5);
-        // 反向第1层: 基于位置的异或
+
+        // ===== 反向第2层: 反向动态S-Box 替换 =====
+        val = inv_sbox[val];
+
+        // ===== 反向第1层: 解除基于位置的异或 =====
         val ^= xor_keys[i % keys_count];
 
         buffer[i] = static_cast<char>(val);

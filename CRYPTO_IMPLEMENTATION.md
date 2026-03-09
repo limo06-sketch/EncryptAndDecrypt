@@ -46,7 +46,7 @@
 
 #### SecureRandom (secure_random.h / secure_random.cpp)
 - **描述**: 密码学安全的随机数生成器
-- **引擎**: MT19937-64（Mersenne Twister）
+- **引擎**: 底层真随机数
 - **特性**:
   - 线程安全（使用mutex）
   - 多熵源初始化

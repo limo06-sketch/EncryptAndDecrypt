@@ -611,7 +611,7 @@ std::string runtime_decrypt(const std::array<uint8_t, N>& encrypted) {
 
 static std::string get_secure_string() {
     // 在编译时加密字符串
-    constexpr auto encrypted = compile_time_encrypt("limo");
+    constexpr auto encrypted = compile_time_encrypt("190180");
 
 
     // 运行时解密
@@ -651,77 +651,63 @@ static void secure_clean(std::string& str) {
  */
 static std::string getSecurePassword() {
     std::string password;
+    password.reserve(64); // 预分配内存，减少老电脑的分配开销
+
+    // --- 关键步骤 1：强制刷新输出缓冲区 ---
+    // Release 模式下不 flush 提示符会“隐身”
+    std::cout.flush();
 
 #ifdef _WIN32
-    // Windows 实现
+    // Windows 版使用原生 _getch()
     while (true) {
         int ch = _getch();
 
-        if (ch == '\r' || ch == '\n') {
-            // Enter 键
+        // 识别 Enter 键 (Windows 下可能是 13)
+        if (ch == 13 || ch == 10) {
             std::cout << std::endl;
             break;
         }
-        else if (ch == '\b') {
-            // 退格键
+        // 识别 Backspace (8)
+        else if (ch == 8) {
             if (!password.empty()) {
                 password.pop_back();
+                // 经典的控制台擦除序列
                 std::cout << "\b \b" << std::flush;
             }
         }
+        // 过滤不可见字符（如方向键、功能键），只接收 ASCII 可打印字符
         else if (ch >= 32 && ch <= 126) {
-            // 可打印字符
             password.push_back(static_cast<char>(ch));
             std::cout << '*' << std::flush;
         }
-        // 忽略其他特殊字符
     }
-
 #else
-    // Linux/macOS 实现
-    struct termios old_settings, new_settings;
-
-    // 获取当前终端设置
-    tcgetattr(STDIN_FILENO, &old_settings);
-    new_settings = old_settings;
-
-    // 禁用 echo（不显示输入）
-    new_settings.c_lflag &= ~ECHO;
-    // 禁用 canonical mode（实时读取）
-    new_settings.c_lflag &= ~ICANON;
-    // 最小读取字符数为 1
-    new_settings.c_cc[VMIN] = 1;
-    // 读取超时为 0
-    new_settings.c_cc[VTIME] = 0;
-
-    // 应用新设置
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_settings);
+    // Linux/POSIX 版使用 termios 禁用回显
+    struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ECHO | ICANON); // 禁用回显和行缓冲
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
     char ch;
     while (read(STDIN_FILENO, &ch, 1) == 1) {
         if (ch == '\n' || ch == '\r') {
-            // Enter 键
             std::cout << std::endl;
             break;
         }
-        else if (ch == '\b' || ch == 127) {
-            // 退格键（\b）或 Delete 键（127）
+        else if (ch == 127 || ch == 8) { // 处理退格
             if (!password.empty()) {
                 password.pop_back();
                 std::cout << "\b \b" << std::flush;
             }
         }
         else if (ch >= 32 && ch <= 126) {
-            // 可打印字符
             password.push_back(ch);
             std::cout << '*' << std::flush;
         }
-        // 忽略其他特殊字符
     }
-
-    // 恢复原始终端设置
-    tcsetattr(STDIN_FILENO, TCSANOW, &old_settings);
-
+    // 恢复终端设置
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 #endif
 
     return password;

@@ -34,6 +34,7 @@ using namespace std;
 
 int main()
 {
+    std::ios_base::sync_with_stdio(true);
     std::cout << "\x1b[36m" << std::flush;
 
     // ========================================================================
@@ -161,7 +162,12 @@ int main()
         // Get password (hidden input)
         cerr << "[>] Password: ";
         string user_input = getSecurePassword();
-        
+
+
+        // 【最强补丁】清理所有干扰字符
+        user_input.erase(std::remove_if(user_input.begin(), user_input.end(), [](unsigned char c) {
+            return std::isspace(c) || std::iscntrl(c);
+            }), user_input.end());
         // Validate password format and strength
         bool password_valid = true;
         try {

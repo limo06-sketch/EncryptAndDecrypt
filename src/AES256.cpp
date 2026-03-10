@@ -509,6 +509,7 @@ std::vector<uint8_t> AES256::decrypt(const std::vector<uint8_t>& ciphertext) {
 
 }
 
+#if 1
 // AEAD: Encrypt-then-MAC. Output = IV || ciphertext || MAC(bytes)
 std::vector<uint8_t> AES256::encryptAEAD(const std::vector<uint8_t>& plaintext) {
     // Encrypt with CTR
@@ -552,7 +553,7 @@ std::vector<uint8_t> AES256::decryptAEAD(const std::vector<uint8_t>& aead) {
 
     return pt;
 }
-
+#endif
 // String convenience functions
 std::string AES256::encryptString(const std::string& plaintext) {
     std::vector<uint8_t> plainData(plaintext.begin(), plaintext.end());

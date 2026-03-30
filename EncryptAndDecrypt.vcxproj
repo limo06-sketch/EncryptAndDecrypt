@@ -50,9 +50,16 @@
     <None Include="docs\CROSSPLATFORM_GUIDE.md" />
     <None Include="docs\CROSSPLATFORM_QUICKSTART.md" />
     <None Include="docs\DETAILED_COMPARISON.md" />
+    <None Include="docs\KDF_CODE_DIFF.md" />
+    <None Include="docs\KDF_IMPLEMENTATION_SUMMARY.md" />
+    <None Include="docs\KDF_QUICK_REFERENCE.md" />
+    <None Include="docs\KDF_SECURITY_AUDIT.md" />
+    <None Include="docs\KDF_UPGRADE.md" />
+    <None Include="docs\KDF_USAGE_GUIDE.md" />
     <None Include="docs\OPTIMIZATION_CHECKLIST.md" />
     <None Include="docs\PERFORMANCE_ANALYSIS.md" />
     <None Include="docs\QUICK_START.md" />
+    <None Include="docs\README_KDF.md" />
     <None Include="docs\SECURITY_ASSESSMENT.md" />
     <None Include="docs\SECURITY_IMPLEMENTATION_GUIDE.md" />
     <None Include="docs\SECURITY_QUICK_START.md" />
@@ -61,6 +68,7 @@
     <None Include="DOCUMENTATION_INDEX.md" />
     <None Include="ENHANCED_MAIN_USAGE_GUIDE.md" />
     <None Include="INTEGRATION_COMPLETION_CHECKLIST.md" />
+    <None Include="KDF_PROJECT_COMPLETION.md" />
     <None Include="MAIN_COMPLETE_VERIFICATION.md" />
     <None Include="MAIN_DELIVERY_CHECKLIST.md" />
     <None Include="MAIN_INTEGRATION_SUMMARY.md" />
@@ -179,6 +187,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
